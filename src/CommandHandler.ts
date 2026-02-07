@@ -25,52 +25,42 @@ export class CommandHandler {
     }
 
     private async loadCommands() {
-        const __filename = fileURLToPath(import.meta.url);
-        const __dirname = path.dirname(__filename);
+        const commandsPath = '/workspaces/jessapi/src/commands';
+        
+        console.log(`📂 Buscando comandos em: ${commandsPath}`);
 
-        const cwd = process.cwd();
-        const srcCommands = path.resolve(cwd, 'src', 'commands');
-        const distCommands = path.resolve(cwd, 'dist', 'commands');
-        const fallbackCommands = path.resolve(__dirname, 'commands');
-
-        const commandsDir = existsSync(srcCommands)
-            ? srcCommands
-            : existsSync(distCommands)
-                ? distCommands
-                : fallbackCommands;
-
-        // No Windows, o glob prefere barras normais (/)
-        const pattern = path.resolve(commandsDir, '**', '*.{ts,js}').replace(/\\/g, '/');
-
-        console.log(`📂 Buscando comandos em: ${commandsDir}`);
-
-        // Busca arquivos .ts ou .js
-        const files = await glob(pattern, { nodir: true });
+        // Pattern que aceita .ts e ignora case sensitivity
+        const files = await glob(`${commandsPath}/*.ts`, { nocase: true });
+        
+        console.log(`📄 Arquivos encontrados brutos:`, files);
 
         for (const file of files) {
-            // Converte o caminho do arquivo para o formato que o glob/import gosta
-            const normalizedFile = file.replace(/\\/g, '/');
-            
-            if (normalizedFile.endsWith('Command.ts') || normalizedFile.endsWith('Command.js')) continue;
+            // Ignora o arquivo de definição da Interface (Command.ts)
+            if (file.toLowerCase().endsWith('src/commands/command.ts')) continue;
 
             try {
-                const fileUrl = pathToFileURL(normalizedFile).href;
+                const fileUrl = pathToFileURL(file).href;
                 const module = await import(fileUrl);
                 
-                const CommandClass = Object.values(module)[0] as any;
+                // Pega a classe (pode estar no 'default' ou ser a primeira exportação)
+                const ExportedClass = module.default || Object.values(module).find(val => typeof val === 'function');
                 
-                if (CommandClass && typeof CommandClass === 'function') {
-                    const instance: Command = new CommandClass();
-                    this.commands.set(instance.name.toLowerCase(), instance);
+                if (ExportedClass) {
+                    const instance: Command = new ExportedClass();
                     
-                    if (instance.aliases) {
-                        instance.aliases.forEach(alias => {
-                            this.commands.set(alias.toLowerCase(), instance);
-                        });
+                    // Verifica se a instância tem as propriedades básicas
+                    if (instance.name) {
+                        this.commands.set(instance.name.toLowerCase(), instance);
+                        
+                        if (instance.aliases) {
+                            instance.aliases.forEach(alias => {
+                                this.commands.set(alias.toLowerCase(), instance);
+                            });
+                        }
                     }
                 }
             } catch (error) {
-                console.error(`❌ Erro no arquivo ${file}:`, error);
+                console.error(`❌ Erro ao instanciar ${file}:`, error);
             }
         }
 
