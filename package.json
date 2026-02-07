@@ -1,0 +1,39 @@
+{
+  "dependencies": {
+    "@whiskeysockets/baileys": "^7.0.0-rc.9",
+    "baileys": "^7.0.0-rc.9",
+    "glob": "^13.0.1",
+    "pino": "^10.3.0",
+    "qrcode-terminal": "^0.12.0"
+  },
+  "name": "jessapi",
+  "version": "1.0.0",
+  "description": "��#\u0000 \u0000j\u0000e\u0000s\u0000s\u0000a\u0000p\u0000i\u0000\r\u0000 \u0000",
+  "main": "index.js",
+  "devDependencies": {
+    "@types/glob": "^8.1.0",
+    "@types/node": "^25.2.1",
+    "@types/qrcode-terminal": "^0.12.2",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  },
+  "scripts": {
+    "start": "tsx index.ts",
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jessilver/jessapi.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/jessilver/jessapi/issues"
+  },
+  "homepage": "https://github.com/jessilver/jessapi#readme"
+  
+}
