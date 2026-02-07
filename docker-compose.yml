@@ -3,8 +3,12 @@ services:
     build: .
     container_name: jessapi_bot
     restart: always
+    stdin_open: true 
+    tty: true        
+    command: tail -f /dev/null 
     volumes:
-      - jess_data:/app
+      - .:/app
+      - /app/node_modules
       - ./auth_info:/app/auth_info
     environment:
       - NODE_ENV=development
