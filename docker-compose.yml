@@ -10,4 +10,4 @@ services:
       - NODE_ENV=development
 
 volumes:
-  jess_data:
+  jess_data: 
