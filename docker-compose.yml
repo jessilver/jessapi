@@ -1,0 +1,13 @@
+services:
+  jess-bot:
+    build: .
+    container_name: jessapi_bot
+    restart: always
+    volumes:
+      - jess_data:/app
+      - ./auth_info:/app/auth_info
+    environment:
+      - NODE_ENV=development
+
+volumes:
+  jess_data:

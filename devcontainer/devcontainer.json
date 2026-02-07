@@ -1,0 +1,16 @@
+{
+  "name": "JessAPI Node Project",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "jess-bot",
+  "workspaceFolder": "/app",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "ms-vscode.vscode-typescript-next"
+      ]
+    }
+  },
+  "remoteUser": "node"
+}
