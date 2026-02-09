@@ -56,7 +56,7 @@ export class LookCommand implements Command {
             // 2. Monta as linhas dinamicamente (se não existe, não aparece)
             let infoRows = [`👤 *Informações do Usuário:*`, `🆔 *ID:* ${targetId}`];
 
-            if (nomePerfil) infoRows.push(`📛 *Nome:* ${nomePerfil}`);
+            // if (nomePerfil) infoRows.push(`📛 *Nome:* ${nomePerfil}`);
             if (device) infoRows.push(`📱 *Dispositivo:* ${device}`);
             if (bio) infoRows.push(`📝 *Bio:* ${bio}`);
 
