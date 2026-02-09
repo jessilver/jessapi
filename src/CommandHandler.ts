@@ -12,6 +12,10 @@ export class CommandHandler {
         this.loadCommands();
     }
 
+    public getCommands(): Command[] {
+        return Array.from(this.commands.values());
+    }
+
     private async loadCommands() {
         const commandsPath = '/workspaces/jessapi/src/commands';
         console.log(`📂 Buscando comandos em: ${commandsPath}`);
