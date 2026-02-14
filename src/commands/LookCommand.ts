@@ -1,5 +1,5 @@
 import { Command } from './Command.js';
-import { WASocket, WAMessage, getDevice } from '@whiskeysockets/baileys';
+import { WASocket, WAMessage } from '@whiskeysockets/baileys';
 
 export class LookCommand implements Command {
     name = 'look';
@@ -12,7 +12,7 @@ export class LookCommand implements Command {
 
         const firstArg = args[0]?.toLowerCase();
         const isQuoted = msg.message?.extendedTextMessage?.contextInfo?.participant;
-        const isMentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.length;
+        const isMentioned = !!msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.length;
 
         // CASO 1: Apenas !look (Dados da Conversa)
         if (!firstArg && !isQuoted && !isMentioned) {
@@ -29,7 +29,7 @@ export class LookCommand implements Command {
         let targetId: string | undefined;
 
         if (firstArg === 'me') {
-            targetId = msg.key.participant || msg.key.remoteJid || undefined;
+            targetId = msg.key.participant ?? msg.key.remoteJid ?? (sock as any)?.user?.id ?? undefined;
         } 
         // CASO 3: Resposta (Quoted)
         else if (isQuoted) {
@@ -40,14 +40,13 @@ export class LookCommand implements Command {
             targetId = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid![0];
         }
 
-        // Resposta para dados de Usuário (com Dispositivo)
+        // Resposta para dados de Usuário
         if (targetId) {
-            const device = getDevice(targetId);
             const ppUrl = await sock.profilePictureUrl(targetId, 'image').catch(() => null);
             const statusData: any = await sock.fetchStatus(targetId).catch(() => null);
 
             // 1. Coleta apenas o que existe
-            const nomePerfil = (targetId === (msg.key.participant || msg.key.remoteJid)) 
+            const nomePerfil = (targetId === (msg.key.participant ?? msg.key.remoteJid)) 
                 ? msg.pushName 
                 : (msg.message?.extendedTextMessage?.contextInfo as any)?.pushName;
 
@@ -57,7 +56,6 @@ export class LookCommand implements Command {
             let infoRows = [`👤 *Informações do Usuário:*`, `🆔 *ID:* ${targetId}`];
 
             // if (nomePerfil) infoRows.push(`📛 *Nome:* ${nomePerfil}`);
-            if (device) infoRows.push(`📱 *Dispositivo:* ${device}`);
             if (bio) infoRows.push(`📝 *Bio:* ${bio}`);
 
             const caption = infoRows.join('\n');
@@ -75,6 +73,9 @@ export class LookCommand implements Command {
                     mentions: [targetId] 
                 }, { quoted: msg });
             }
+        } else {
+            // Fallback: instrução de uso quando não foi possível resolver alvo
+            await sock.sendMessage(remoteJid, { text: 'Use: !look, !look me, responder a uma mensagem com !look, ou mencionar alguém com !look @usuario' }, { quoted: msg });
         }
     }
 }

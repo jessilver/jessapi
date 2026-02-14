@@ -1,5 +1,5 @@
 import { Command } from './Command.js';
-import { WASocket, WAMessage, proto } from '@whiskeysockets/baileys';
+import { WASocket, WAMessage } from '@whiskeysockets/baileys';
 
 export class HelpCommand implements Command {
     name = 'help';

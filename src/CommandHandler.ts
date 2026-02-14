@@ -9,14 +9,16 @@ export class CommandHandler {
     private isPublic: boolean = true; // Liberado para todos os grupos e PVs
 
     constructor() {
-        this.loadCommands();
+        // Commands are loaded explicitly via `loadCommands()` to avoid
+        // race conditions during async initialization. Call `await handler.loadCommands()`
+        // from your startup code before handling messages.
     }
 
     public getCommands(): Command[] {
         return Array.from(this.commands.values());
     }
 
-    private async loadCommands() {
+    public async loadCommands() {
         const commandsPath = '/workspaces/jessapi/src/commands';
         console.log(`📂 Buscando comandos em: ${commandsPath}`);
 

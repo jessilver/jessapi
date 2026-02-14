@@ -11,6 +11,9 @@ import { CommandHandler } from './CommandHandler.js';
 const handler = new CommandHandler();
 
 async function startBot() {
+    // Carrega os comandos antes de iniciar o socket para evitar race conditions
+    await handler.loadCommands();
+
     // 1. Configuração de autenticação persistente no volume do Docker
     const { state, saveCreds } = await useMultiFileAuthState('auth_info');
     
