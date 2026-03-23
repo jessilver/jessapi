@@ -1,0 +1,17 @@
+# Dependencies and local artifacts
+node_modules
+npm-debug.log*
+
+# Git metadata
+.git
+.gitignore
+
+# Sensitive/local runtime data
+auth_info
+auth_info/
+
+# Environment and editor files
+.env
+.env.*
+.vscode
+.DS_Store
