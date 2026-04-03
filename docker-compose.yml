@@ -3,11 +3,14 @@ services:
     build: .
     container_name: jessapi_bot
     restart: always
+    ports:
+      - "3000:3000"
     volumes:
       - jess_data:/app
-      - ./auth_info:/app/auth_info
+      - ./auth_sessions:/app/auth_sessions
     environment:
       - NODE_ENV=development
+      - PORT=3000
 
 volumes:
   jess_data: 

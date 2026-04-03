@@ -5,6 +5,7 @@
     "moduleResolution": "NodeNext",
     "moduleDetection": "force",
     "lib": ["ESNext"],
+    "types": ["node", "express", "cors"],
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,

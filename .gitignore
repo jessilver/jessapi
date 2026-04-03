@@ -130,3 +130,4 @@ dist
 # End of https://mrkandreev.name/snippets/gitignore-generator/#Node,ts,js,npm
 
 auth_info/
+auth_sessions/

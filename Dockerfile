@@ -17,5 +17,9 @@ RUN npm install
 # Copiando o resto do código
 COPY . .
 
+# Ensure auth_sessions exists and is writable by the container runtime
+RUN mkdir -p auth_sessions && chmod -R 777 auth_sessions
+
 # Comando para rodar (o tsx lida bem com ESM dentro do container)
-CMD ["npx", "tsx", "src/index.ts"]
+EXPOSE 3000
+CMD ["npm", "run", "start"]
