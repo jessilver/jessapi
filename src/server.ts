@@ -2,6 +2,7 @@ import express from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import SessionManager from './sessions/SessionManager.js';
+import { CommandHandler } from './CommandHandler.js';
 
 const app = express();
 app.use(cors());
@@ -78,13 +79,19 @@ app.post('/messages/send', async (req: Request, res: Response) => {
 app.delete('/sessions/:id', async (req: Request, res: Response) => {
   const id = req.params.id;
   try {
-    await SessionManager.deleteSession(id);
-    res.json({ status: 'deleted' });
+    const removeAuth = String(req.query.removeAuth || '').toLowerCase() === 'true' || String(req.query.removeAuth || '') === '1';
+    await SessionManager.deleteSession(id, removeAuth);
+    res.json({ status: 'deleted', removedAuth: removeAuth });
   } catch (err: any) {
     console.error('deleteSession error', err);
     res.status(500).json({ error: err?.message || 'failed to delete' });
   }
 });
+
+// Load command handlers before starting the server
+const handler = new CommandHandler();
+await handler.loadCommands();
+SessionManager.setCommandHandler(handler);
 
 const port = Number(process.env.PORT || 3000);
 app.listen(port, () => {

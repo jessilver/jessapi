@@ -9,6 +9,7 @@ import path from 'path';
 import fs from 'fs';
 import fsPromises from 'fs/promises';
 import { createHmac } from 'crypto';
+import { CommandHandler } from '../CommandHandler.js';
 
 // Use global fetch if available (Node 18+). Cast to any to avoid TS lib issues.
 
@@ -25,6 +26,11 @@ type Session = {
 
 export class SessionManager {
   private sessions = new Map<string, Session>();
+  private handler?: CommandHandler;
+
+  public setCommandHandler(handler: CommandHandler) {
+    this.handler = handler;
+  }
 
   // Cleanup socket and in-memory session but DO NOT remove auth files on disk
   private async cleanupSocketOnly(id: string) {
@@ -152,7 +158,7 @@ export class SessionManager {
     sock.ev.on('connection.update', connHandler);
     session.unsubscribeConnection = () => { try { sock.ev.off('connection.update', connHandler); } catch (e) {} };
 
-    // messages listener: log and webhook
+    // messages listener: log, webhook and delegate to CommandHandler if present
     sock.ev.on('messages.upsert', async ({ messages, type }) => {
       if (type !== 'notify') return;
       const msg = messages[0];
@@ -161,6 +167,18 @@ export class SessionManager {
       const text = this.extractText(msg) || undefined;
       console.log(`[${id}] 📥 nova mensagem de: ${from} | fromMe: ${msg?.key?.fromMe} | text: ${text}`);
       void this.sendWebhook('message_received', { sessionId: id, from: fromNumber, text });
+
+      // Ignore messages originating from this account
+      if (msg?.key?.fromMe) return;
+
+      // If a CommandHandler was provided, let it handle commands
+      if (this.handler) {
+        try {
+          await this.handler.handle(sock, msg);
+        } catch (err) {
+          console.error(`[${id}] Erro no CommandHandler:`, err);
+        }
+      }
     });
 
     // Resolve when QR generated or connected, with a fallback timeout
@@ -196,7 +214,7 @@ export class SessionManager {
     return this.sessions.get(id);
   }
 
-  async deleteSession(id: string) {
+  async deleteSession(id: string, removeAuth = false) {
     const session = this.sessions.get(id);
     if (session) {
       try {
@@ -214,12 +232,14 @@ export class SessionManager {
       this.sessions.delete(id);
     }
 
-    const authDir = path.join(process.cwd(), 'auth_sessions', id);
-    try {
-      // Node 14+ supports rm with recursive; use force
-      await fsPromises.rm(authDir, { recursive: true, force: true });
-    } catch (e) {
-      // best-effort cleanup
+    if (removeAuth) {
+      const authDir = path.join(process.cwd(), 'auth_sessions', id);
+      try {
+        // Node 14+ supports rm with recursive; use force
+        await fsPromises.rm(authDir, { recursive: true, force: true });
+      } catch (e) {
+        // best-effort cleanup
+      }
     }
   }
 
