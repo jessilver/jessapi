@@ -26,6 +26,19 @@ type Session = {
 export class SessionManager {
   private sessions = new Map<string, Session>();
 
+  // Cleanup socket and in-memory session but DO NOT remove auth files on disk
+  private async cleanupSocketOnly(id: string) {
+    const session = this.sessions.get(id);
+    if (!session) return;
+    try {
+      if (session.unsubscribeConnection) session.unsubscribeConnection();
+    } catch (e) {}
+    try {
+      if (session.sock?.end) await session.sock.end();
+    } catch (e) {}
+    this.sessions.delete(id);
+  }
+
   private async sendWebhook(event: string, payload: any) {
     const url = process.env.WEBHOOK_URL;
     if (!url) return;
@@ -73,8 +86,8 @@ export class SessionManager {
     if (this.sessions.has(id)) {
       const existing = this.sessions.get(id)!;
       if (existing.status === 'open') return { id, status: 'open' };
-      // If exists but not open, attempt cleanup before reconnect
-      await this.deleteSession(id);
+      // If exists but not open, cleanup socket only (preserve auth files) before reconnect
+      await this.cleanupSocketOnly(id);
     }
 
     const authDir = path.join(process.cwd(), 'auth_sessions', id);
@@ -106,6 +119,8 @@ export class SessionManager {
     // Persistent connection handler (use named handler so we can off() later)
     const connHandler = (update: any) => {
       const { connection, lastDisconnect, qr } = update as any;
+      // debug log full update for diagnosis
+      try { console.log(`[${id}] connection.update ->`, JSON.stringify(update)); } catch (e) { console.log(`[${id}] connection.update (non-serializable)`); }
       if (qr) {
         session.lastQr = qr;
         // webhook: QR generated
@@ -126,8 +141,8 @@ export class SessionManager {
         const error = lastDisconnect?.error ? String(lastDisconnect.error) : undefined;
         void this.sendWebhook('disconnected', { sessionId: id, reason, error });
         if (shouldReconnect) {
-          // schedule a reconnect attempt (will clean existing and recreate)
-          setTimeout(() => this.createSession(id).catch(console.error), 2000);
+          // cleanup socket but preserve auth files, then recreate
+          void this.cleanupSocketOnly(id).then(() => setTimeout(() => this.createSession(id).catch(console.error), 2000)).catch(console.error);
         } else {
           session.status = 'loggedOut';
         }

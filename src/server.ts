@@ -28,6 +28,14 @@ app.post('/sessions/:id', async (req: Request, res: Response) => {
   const id = req.params.id;
   try {
     const result = await SessionManager.createSession(id);
+    // If a QR string is present, include a ready-to-use image URL
+    if (result && (result as any).qr) {
+      try {
+        (result as any).qr_url = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent((result as any).qr)}`;
+      } catch (e) {
+        // ignore encoding errors
+      }
+    }
     res.json(result);
   } catch (err: any) {
     console.error('createSession error', err);
@@ -44,7 +52,13 @@ app.get('/sessions/:id/status', (req: Request, res: Response) => {
   const id = req.params.id;
   const session = SessionManager.getSession(id);
   if (!session) return res.status(404).json({ error: 'not found' });
-  res.json({ id, status: session.status, lastQr: session.lastQr || null });
+  const response: any = { id, status: session.status, lastQr: session.lastQr || null };
+  if (session.lastQr) {
+    try {
+      response.qr_url = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(session.lastQr)}`;
+    } catch (e) {}
+  }
+  res.json(response);
 });
 
 app.post('/messages/send', async (req: Request, res: Response) => {
