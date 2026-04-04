@@ -62,6 +62,26 @@ app.get('/sessions/:id/status', (req: Request, res: Response) => {
   res.json(response);
 });
 
+// Diagnostic: get session info
+app.get('/sessions/:id/info', (req: Request, res: Response) => {
+  const id = req.params.id;
+  const info = SessionManager.getSessionInfo(id);
+  if (!info) return res.status(404).json({ error: 'not found' });
+  res.json(info);
+});
+
+// Force reconnect a session (cleanup socket only and recreate)
+app.post('/sessions/:id/reconnect', async (req: Request, res: Response) => {
+  const id = req.params.id;
+  try {
+    const result = await SessionManager.reconnectSession(id);
+    res.json(result);
+  } catch (err: any) {
+    console.error('reconnectSession error', err);
+    res.status(500).json({ error: err?.message || 'failed to reconnect' });
+  }
+});
+
 app.post('/messages/send', async (req: Request, res: Response) => {
   const { id_sessao, numero, texto } = req.body;
   if (!id_sessao || !numero || !texto) {
@@ -69,10 +89,18 @@ app.post('/messages/send', async (req: Request, res: Response) => {
   }
   try {
     const result = await SessionManager.sendMessage(id_sessao, numero, texto);
-    res.json({ status: 'sent', result });
+    const queued = Boolean(result && typeof result === 'object' && (result as any).queued);
+    if (queued) {
+      return res.status(202).json({ status: 'queued', result });
+    }
+    return res.json({ status: 'sent', result });
   } catch (err: any) {
     console.error('sendMessage error', err);
-    res.status(500).json({ error: err?.message || 'failed to send' });
+    const msg = String(err?.message || 'failed to send');
+    if (/invalid destination number|destination number is empty|not on whatsapp/i.test(msg.toLowerCase())) {
+      return res.status(400).json({ error: msg });
+    }
+    res.status(500).json({ error: msg });
   }
 });
 
@@ -92,6 +120,12 @@ app.delete('/sessions/:id', async (req: Request, res: Response) => {
 const handler = new CommandHandler();
 await handler.loadCommands();
 SessionManager.setCommandHandler(handler);
+// Attempt to restore any existing auth sessions from disk (non-blocking)
+try {
+  SessionManager.restoreSessionsFromDisk();
+} catch (e) {
+  console.error('restoreSessionsFromDisk error', e);
+}
 
 const port = Number(process.env.PORT || 3000);
 app.listen(port, () => {
