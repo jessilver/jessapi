@@ -97,10 +97,15 @@ export class SessionManager {
         const sig = createHmac('sha256', secret).update(body).digest('hex');
         // prefix with algorithm to make verification explicit
         headers['x-jess-signature'] = `sha256=${sig}`;
+        // Log that signature was generated (no secret printed)
+        try { console.log(`[Webhook] assinatura gerada para evento ${event}: ${headers['x-jess-signature']}`); } catch (e) {}
       } catch (e) {
         console.error('Failed to compute webhook HMAC', e);
       }
     }
+
+    // Operational log for debugging when a webhook is about to be sent
+    try { console.log(`[Webhook] Disparado evento: ${event} -> ${url}`); } catch (e) {}
 
     try {
       await (globalThis as any).fetch(url, {

@@ -4,6 +4,9 @@ import cors from 'cors';
 import SessionManager from './sessions/SessionManager.js';
 import { CommandHandler } from './CommandHandler.js';
 
+import dotenv from 'dotenv';
+dotenv.config();
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -116,18 +119,28 @@ app.delete('/sessions/:id', async (req: Request, res: Response) => {
   }
 });
 
-// Load command handlers before starting the server
-const handler = new CommandHandler();
-await handler.loadCommands();
-SessionManager.setCommandHandler(handler);
-// Attempt to restore any existing auth sessions from disk (non-blocking)
-try {
-  SessionManager.restoreSessionsFromDisk();
-} catch (e) {
-  console.error('restoreSessionsFromDisk error', e);
-}
+// Load command handlers and start the server inside an async IIFE
+(async () => {
+  const handler = new CommandHandler();
+  try {
+    await handler.loadCommands();
+  } catch (e) {
+    console.error('Failed to load commands', e);
+  }
+  SessionManager.setCommandHandler(handler);
 
-const port = Number(process.env.PORT || 3000);
-app.listen(port, () => {
-  console.log(`JessAPI Session Manager listening on ${port}`);
+  // Attempt to restore any existing auth sessions from disk (non-blocking)
+  try {
+    SessionManager.restoreSessionsFromDisk();
+  } catch (e) {
+    console.error('restoreSessionsFromDisk error', e);
+  }
+
+  const port = Number(process.env.PORT || 3000);
+  app.listen(port, () => {
+    console.log(`JessAPI Session Manager listening on ${port}`);
+  });
+})().catch(err => {
+  console.error('Startup error', err);
+  process.exit(1);
 });
