@@ -118,6 +118,31 @@ export class SessionManager {
     }
   }
 
+  // Send a payload JSON as the top-level body and sign the payload JSON with HMAC-SHA256
+  private async sendSignedWebhook(payloadObj: any) {
+    const url = process.env.WEBHOOK_URL;
+    if (!url) return;
+    const secret = process.env.WEBHOOK_SECRET;
+    const body = JSON.stringify(payloadObj);
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (secret) {
+      try {
+        const sig = createHmac('sha256', secret).update(body).digest('hex');
+        headers['x-jess-signature'] = `sha256=${sig}`;
+        try { console.log(`[Webhook] assinatura gerada para payload ${payloadObj.event}: ${headers['x-jess-signature']}`); } catch (e) {}
+      } catch (e) {
+        console.error('Failed to compute webhook HMAC for payload', e);
+      }
+    }
+
+    try { console.log(`[Webhook] Disparando payload: ${payloadObj.event} -> ${url}`); } catch (e) {}
+    try {
+      await (globalThis as any).fetch(url, { method: 'POST', headers, body });
+    } catch (err) {
+      console.error('Failed to POST signed webhook', err);
+    }
+  }
+
   private extractText(msg: any): string | null {
     if (!msg?.message) return null;
     const m = msg.message;
@@ -312,19 +337,67 @@ export class SessionManager {
       try {
         for (const u of updates || []) {
           const key = u?.key || {};
-          const status = u?.update?.status;
-          if (typeof status === 'undefined') continue;
+          const update = u?.update || {};
+          const ack = update?.status;
+
+          // Only process updates that carry a numeric status (filter out
+          // non-numeric/stub-only updates to reduce noise).
+          if (typeof ack !== 'number') {
+            console.log(`[${id}] messages.update: skipping non-numeric status`, update);
+            continue;
+          }
+
           const remoteJid = key?.remoteJid;
           const idMsg = key?.id;
           const fromMe = Boolean(key?.fromMe);
-          console.log(`[${id}] message status update: jid=${remoteJid} id=${idMsg} fromMe=${fromMe} status=${status}`);
-          void this.sendWebhook('message_status', {
-            sessionId: id,
-            remoteJid,
-            id: idMsg,
-            fromMe,
-            status
-          });
+
+          // Map Baileys ACK to Django-friendly status
+          // Correct mapping (shifted by 1):
+          // 2 -> SENT (SERVER_ACK)
+          // 3 -> DELIVERED (DELIVERY_ACK)
+          // 4,5 -> READ (READ/PLAYED)
+          // 0 -> FAILED
+          const mapAckToStatus = (a: number, upd: any): string | undefined => {
+            if (a === 2) return 'SENT'; // SERVER_ACK
+            if (a === 3) return 'DELIVERED'; // DELIVERY_ACK
+            if (a === 4 || a === 5) return 'READ'; // READ or PLAYED -> treat as READ
+            // If explicit stub/error or ack 0 -> failed
+            if (a === 0 || typeof upd?.messageStubType !== 'undefined') return 'FAILED';
+            return undefined;
+          };
+
+          const mappedStatus = mapAckToStatus(ack, update);
+          if (!mappedStatus) {
+            console.log(`[${id}] message status update: unknown ACK=${String(ack)}; skipping webhook`);
+            continue;
+          }
+
+          console.log(`[${id}] message status update: jid=${remoteJid} id=${idMsg} fromMe=${fromMe} mappedStatus=${mappedStatus}`);
+
+          const payload = {
+            event: 'message_status',
+            session_id: id,
+            message_id: idMsg,
+            status: mappedStatus,
+            description: 'Atualização via webhook'
+          };
+
+          // Log exactly what will be sent to the Django backend
+          try { console.log('[Webhook Out] Disparando atualização de status:', JSON.stringify(payload)); } catch (e) {}
+
+          // Send a signed payload (HMAC-SHA256 of the payload JSON).
+          try {
+            void this.sendSignedWebhook(payload);
+          } catch (e) {
+            // fallback only if sendSignedWebhook throws
+            (async () => {
+              try {
+                await this.sendWebhook('message_status', payload);
+              } catch (err) {
+                console.error('Failed to send message_status webhook (fallback)', err);
+              }
+            })().catch(() => {});
+          }
         }
       } catch (err) {
         console.error(`[${id}] messages.update parse error`, err);

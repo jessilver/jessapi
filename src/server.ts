@@ -1,11 +1,10 @@
+import dotenv from 'dotenv';
+dotenv.config();
 import express from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import SessionManager from './sessions/SessionManager.js';
 import { CommandHandler } from './CommandHandler.js';
-
-import dotenv from 'dotenv';
-dotenv.config();
 
 const app = express();
 app.use(cors());
@@ -13,15 +12,42 @@ app.use(express.json());
 
 // Simple API key middleware
 function apiKeyMiddleware(req: Request, res: Response, next: NextFunction) {
-  const apiKey = process.env.API_KEY;
-  if (!apiKey) {
+  const apiKeyRaw = process.env.API_KEY;
+  if (!apiKeyRaw) {
     console.error('API_KEY not configured');
     return res.status(500).json({ error: 'API_KEY not configured on server' });
   }
-  const header = req.header('x-api-key');
-  if (!header || header !== apiKey) {
+
+  // Prefer `x-api-key` but also accept `Authorization: Bearer <key>`
+  const headerX = (req.header('x-api-key') || '') as string;
+  const headerAuth = (req.header('authorization') || '') as string;
+  const headerRaw = headerX || headerAuth || '';
+
+  // normalize: if Authorization: Bearer <token>, extract token
+  let incomingKey = headerRaw;
+  if (typeof incomingKey === 'string' && incomingKey.toLowerCase().startsWith('bearer ')) {
+    incomingKey = incomingKey.slice(7);
+  }
+
+  const expectedKey = String(apiKeyRaw);
+
+  // Trim both sides to defend against CRLF / invisible characters
+  const incomingKeyTrimmed = (incomingKey || '').trim();
+  const expectedKeyTrimmed = (expectedKey || '').trim();
+
+  // Diagnostic logs to help debug 401s
+  console.log('--- DEBUG AUTH ---');
+  console.log('Header recebido (x-api-key):', req.headers['x-api-key']);
+  console.log('Header recebido (authorization):', req.headers['authorization']);
+  console.log('Chave esperada (process.env):', process.env.API_KEY);
+  console.log('incomingKey (trimmed):', incomingKeyTrimmed);
+  console.log('expectedKey (trimmed):', expectedKeyTrimmed);
+  console.log('São iguais?', incomingKeyTrimmed === expectedKeyTrimmed);
+
+  if (!incomingKeyTrimmed || incomingKeyTrimmed !== expectedKeyTrimmed) {
     return res.status(401).json({ error: 'Invalid API key' });
   }
+
   return next();
 }
 

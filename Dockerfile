@@ -4,6 +4,7 @@ FROM node:20-slim
 # Instalando dependências necessárias para bibliotecas de imagem/qr code
 RUN apt-get update && apt-get install -y \
     ffmpeg \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
