@@ -3,11 +3,10 @@ name: Build and Push to GHCR
 on:
   push:
     branches:
-      - main # Dispara o build sempre que atualizar a branch main
+      - main 
 
 env:
   REGISTRY: ghcr.io
-  # O GitHub converte automaticamente o nome do seu repositório para minúsculo aqui
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
@@ -15,21 +14,21 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write # Permissão para gravar a imagem no seu perfil
+      packages: write 
 
     steps:
       - name: Checkout Código
         uses: actions/checkout@v4
 
       - name: Configurar Docker Buildx
-        uses: actions/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v3 # <--- O NOME CORRETO ESTÁ AQUI
 
       - name: Autenticar no GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }} # Token automático do próprio GitHub
+          password: ${{ secrets.GITHUB_TOKEN }} 
 
       - name: Extrair Tags e Labels do Docker
         id: meta
