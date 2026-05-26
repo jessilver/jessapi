@@ -501,6 +501,47 @@ export class SessionManager {
     return { status: 'queued', queued: true, sessionStatus: session.status };
   }
 
+  async sendMassMessage(sessionId: string, toList: string[], text: string) {
+    const session = this.sessions.get(sessionId);
+    if (!session) throw new Error('Session not found');
+    const sock = session.sock as any;
+    if (!sock || typeof sock.sendMessage !== 'function') throw new Error('Session socket not ready');
+
+    const results: any[] = [];
+    for (const to of toList) {
+      try {
+        const jid = await this.resolveDestinationJid(sock, to);
+        if (session.status === 'open') {
+          try {
+            const r = await sock.sendMessage(jid, { text });
+            results.push({ to, jid, result: r });
+          } catch (err: any) {
+            const msg = String(err?.message || err || '');
+            const transient = /not connected|connection closed|timed out|stream errored|socket|transport/i.test(msg.toLowerCase());
+            if (!transient) {
+              console.error(`[${sessionId}] sendMassMessage non-transient error for ${to}:`, err);
+              results.push({ to, jid, error: msg });
+            } else {
+              console.warn(`[${sessionId}] transient send error for ${to}, queueing message:`, msg);
+              const queue = this.sendQueues.get(sessionId) || [];
+              queue.push({ jid, text });
+              this.sendQueues.set(sessionId, queue);
+              results.push({ to, jid, status: 'queued', sessionStatus: session.status });
+            }
+          }
+        } else {
+          const queue = this.sendQueues.get(sessionId) || [];
+          queue.push({ jid, text });
+          this.sendQueues.set(sessionId, queue);
+          results.push({ to, jid, status: 'queued', sessionStatus: session.status });
+        }
+      } catch (err) {
+        console.error(`[${sessionId}] failed to process recipient ${to} in sendMassMessage`, err);
+      }
+    }
+    return results;
+  }
+
   // Restore sessions found on disk under `auth_sessions`.
   // This schedules `createSession` calls spaced by `delayBetweenMs` to avoid connection spikes.
   async restoreSessionsFromDisk(delayBetweenMs = 500) {

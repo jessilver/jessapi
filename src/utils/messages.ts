@@ -41,4 +41,14 @@ export async function sendButtonsMessage(sock: WASocket, jid: string, text: stri
     }
 }
 
-export default { sendListMessage, sendButtonsMessage };
+export async function massMessage(sock: WASocket, jids: string[], message: any) {
+    for (const jid of jids) {
+        try {
+            await sock.sendMessage(jid, message);
+        } catch (err) {
+            console.error(`❌ Erro ao enviar mensagem para ${jid}:`, err);
+        }
+    }
+}
+
+export default { sendListMessage, sendButtonsMessage, massMessage };

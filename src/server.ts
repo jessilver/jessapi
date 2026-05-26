@@ -133,6 +133,28 @@ app.post('/messages/send', async (req: Request, res: Response) => {
   }
 });
 
+app.post('/messages/send-mass', async (req: Request, res: Response) => {
+  const { id_sessao, numeros, texto } = req.body;
+  if (!id_sessao || !numeros || !texto || !Array.isArray(numeros)) {
+    return res.status(400).json({ error: 'missing parameters: id_sessao, numeros (array), texto' });
+  }
+  try {
+    const result = await SessionManager.sendMassMessage(id_sessao, numeros, texto);
+    const queued = Boolean(result && typeof result === 'object' && (result as any).queued);
+    if (queued) {
+      return res.status(202).json({ status: 'queued', result });
+    }
+    return res.json({ status: 'sent', result });
+  } catch (err: any) {
+    console.error('sendMassMessage error', err);
+    const msg = String(err?.message || 'failed to send mass message');
+    if (/invalid destination number|destination number is empty|not on whatsapp/i.test(msg.toLowerCase())) {
+      return res.status(400).json({ error: msg });
+    }
+    res.status(500).json({ error: msg });
+  }
+});
+
 app.delete('/sessions/:id', async (req: Request, res: Response) => {
   const id = req.params.id;
   try {
