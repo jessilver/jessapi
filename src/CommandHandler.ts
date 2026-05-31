@@ -19,7 +19,7 @@ export class CommandHandler {
     }
 
     public async loadCommands() {
-        const commandsPath = '/workspaces/jessapi/src/commands';
+        const commandsPath = './src/commands';
         console.log(`📂 Buscando comandos em: ${commandsPath}`);
 
         const files = await glob(`${commandsPath}/*.ts`, { nocase: true });
