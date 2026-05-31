@@ -64,16 +64,15 @@ jobs:
 
       - name: Injetar Segredos e Aplicar Manifestos
         env:
-          # Puxa os valores do painel de Secrets do repositório da JessAPI
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          API_KEY: ${{ secrets.API_KEY }}
+          # Mapeia as variáveis exatamente com o mesmo nome dos marcadores ($CHAVE_...) do seu YAML
+          CHAVE_DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          CHAVE_API_KEY: ${{ secrets.API_KEY }}
         run: |
-          # Substitui os marcadores do arquivo do Node pelos valores reais
-          sed -i "s|CHAVE_DATABASE_URL|$DATABASE_URL|g" jessapi-deployment.yaml
-          sed -i "s|CHAVE_API_KEY|$API_KEY|g" jessapi-deployment.yaml
+          # O envsubst injeta os segredos com segurança, lidando com barras e arrobas
+          envsubst < jessapi-deployment.yaml > jessapi-deployment-ready.yaml
 
-          # Aplica o manifesto atualizado no cluster
-          kubectl apply -f jessapi-deployment.yaml
+          # Aplica o manifesto gerado e atualizado no cluster
+          kubectl apply -f jessapi-deployment-ready.yaml
 
       - name: Forçar Atualização dos Containers (Rollout)
         run: |
