@@ -68,8 +68,8 @@ jobs:
           CHAVE_DATABASE_URL: ${{ secrets.DATABASE_URL }}
           CHAVE_API_KEY: ${{ secrets.API_KEY }}
         run: |
-          # O envsubst injeta os segredos com segurança, lidando com barras e arrobas
-          envsubst < jessapi-deployment.yaml > jessapi-deployment-ready.yaml
+          # 🟢 Corrigido: Filtro adicionado para o envsubst não quebrar os metadados do Kubernetes do Node
+          envsubst '$CHAVE_DATABASE_URL,$CHAVE_API_KEY' < jessapi-deployment.yaml > jessapi-deployment-ready.yaml
 
           # Aplica o manifesto gerado e atualizado no cluster
           kubectl apply -f jessapi-deployment-ready.yaml
