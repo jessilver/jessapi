@@ -46,16 +46,10 @@ spec:
               value: "redis://redis-service:6379"
             - name: PORT
               value: "3000"
-
-            # 🟢 Conexão com o Banco de Dados Node
             - name: DATABASE_URL
-              # GitHub Secret: DATABASE_URL
-              value: "CHAVE_DATABASE_URL"
-              
-            # 🟢 Chave de Segurança (Bate com a JESS_API_KEY do Django)
+              value: "$CHAVE_DATABASE_URL"
             - name: API_KEY 
-              # GitHub Secret: API_KEY
-              value: "CHAVE_API_KEY"
+              value: "$CHAVE_API_KEY"     
               
           ports:
             - containerPort: 3000
