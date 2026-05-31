@@ -112,12 +112,12 @@ app.post('/sessions/:id/reconnect', async (req: Request, res: Response) => {
 });
 
 app.post('/messages/send', async (req: Request, res: Response) => {
-  const { id_sessao, numero, texto } = req.body;
-  if (!id_sessao || !numero || !texto) {
-    return res.status(400).json({ error: 'missing parameters: id_sessao, numero, texto' });
+  const { session_id, to_number, text } = req.body;
+  if (!session_id || !to_number || !text) {
+    return res.status(400).json({ error: 'missing parameters: session_id, to_number, text' });
   }
   try {
-    const result = await SessionManager.sendMessage(id_sessao, numero, texto);
+    const result = await SessionManager.sendMessage(session_id, to_number, text);
     const queued = Boolean(result && typeof result === 'object' && (result as any).queued);
     if (queued) {
       return res.status(202).json({ status: 'queued', result });
@@ -134,12 +134,12 @@ app.post('/messages/send', async (req: Request, res: Response) => {
 });
 
 app.post('/messages/send-mass', async (req: Request, res: Response) => {
-  const { id_sessao, numeros, texto } = req.body;
-  if (!id_sessao || !numeros || !texto || !Array.isArray(numeros)) {
-    return res.status(400).json({ error: 'missing parameters: id_sessao, numeros (array), texto' });
+  const { session_id, to_numbers, text } = req.body;
+  if (!session_id || !to_numbers || !text || !Array.isArray(to_numbers)) {
+    return res.status(400).json({ error: 'missing parameters: session_id, to_numbers (array), text' });
   }
   try {
-    const result = await SessionManager.sendMassMessage(id_sessao, numeros, texto);
+    const result = await SessionManager.sendMassMessage(session_id, to_numbers, text);
     const queued = Boolean(result && typeof result === 'object' && (result as any).queued);
     if (queued) {
       return res.status(202).json({ status: 'queued', result });

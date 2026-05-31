@@ -1,0 +1,81 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: whatsapp-shared-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jessapi-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jessapi
+  template:
+    metadata:
+      labels:
+        app: jessapi
+    spec:
+      imagePullSecrets:
+        - name: ghcr-secret 
+      dnsPolicy: ClusterFirst
+      dnsConfig:
+        nameservers:
+          - 8.8.8.8
+          - 1.1.1.1
+      containers:
+        - name: jessapi
+          image: ghcr.io/jessilver/jessapi:latest
+          imagePullPolicy: Always
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          env:
+            - name: REDIS_URL
+              value: "redis://redis-service:6379"
+            - name: PORT
+              value: "3000"
+
+            # 🟢 Conexão com o Banco de Dados Node
+            - name: DATABASE_URL
+              # GitHub Secret: DATABASE_URL
+              value: "CHAVE_DATABASE_URL"
+              
+            # 🟢 Chave de Segurança (Bate com a JESS_API_KEY do Django)
+            - name: API_KEY 
+              # GitHub Secret: API_KEY
+              value: "CHAVE_API_KEY"
+              
+          ports:
+            - containerPort: 3000
+              name: web
+          volumeMounts:
+            - mountPath: /app/auth_sessions 
+              name: shared-volume
+      volumes:
+        - name: shared-volume
+          persistentVolumeClaim:
+            claimName: whatsapp-shared-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jessapi-service
+spec:
+  selector:
+    app: jessapi
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000
