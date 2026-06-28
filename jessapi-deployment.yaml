@@ -24,7 +24,7 @@ spec:
         app: jessapi
     spec:
       imagePullSecrets:
-        - name: ghcr-secret 
+        - name: ghcr-secret
       dnsPolicy: ClusterFirst
       dnsConfig:
         nameservers:
@@ -48,14 +48,13 @@ spec:
               value: "3000"
             - name: DATABASE_URL
               value: "$CHAVE_DATABASE_URL"
-            - name: API_KEY 
-              value: "$CHAVE_API_KEY"     
-              
+            - name: API_KEY
+              value: "$CHAVE_API_KEY"
           ports:
             - containerPort: 3000
               name: web
           volumeMounts:
-            - mountPath: /app/auth_sessions 
+            - mountPath: /app/auth_sessions
               name: shared-volume
       volumes:
         - name: shared-volume
