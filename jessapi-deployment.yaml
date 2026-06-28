@@ -47,9 +47,11 @@ spec:
             - name: PORT
               value: "3000"
             - name: DATABASE_URL
-              value: "$CHAVE_DATABASE_URL"
+              value: |
+                $CHAVE_DATABASE_URL
             - name: API_KEY
-              value: "$CHAVE_API_KEY"
+              value: |
+                $CHAVE_API_KEY
           ports:
             - containerPort: 3000
               name: web

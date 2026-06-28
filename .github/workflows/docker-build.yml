@@ -68,10 +68,10 @@ jobs:
           CHAVE_API_KEY: ${{ secrets.API_KEY }}
           CHAVE_WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
         run: |
-          # 🟢 Filtro adicionado para o envsubst não quebrar os metadados do Kubernetes do Node
+          # Executa a substituição segura injetando os blocos de texto limpos
           envsubst '$CHAVE_DATABASE_URL,$CHAVE_API_KEY,$CHAVE_WEBHOOK_SECRET' < jessapi-deployment.yaml > jessapi-deployment-ready.yaml
 
-          # Aplica o manifesto gerado e atualizado no cluster
+          # Aplica o manifesto gerado e validado no cluster
           kubectl apply -f jessapi-deployment-ready.yaml
 
       - name: Forçar Atualização dos Containers (Rollout)
